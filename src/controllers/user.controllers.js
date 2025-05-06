@@ -6,7 +6,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
-  console.log("email :", email);
 
   if (
     [fullName, email, password, username].some((field) => field?.trim() === "")
@@ -19,31 +18,45 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existedUser) {
     throw new ApiError(409, "User with username or email already exists");
   }
+  let avatarLocalPath;
 
-  const avatarLocalPath = req.files?.avatar[0]?.path;
+  if (req.files.avatar) {
+    avatarLocalPath = req.files.avatar[0].path;
+  } else {
+    throw new ApiError(400, "Avatar file is required");
+  }
+  // const avatarLocalPath = req.files?.avatar[0]?.path;
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
   let coverImageLocalPath;
-  // if (req.files?.coverImage) {
-  //   coverImageLocalPath = req.files.coverImage[0].path;
-  // }
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
+
+  if (req.files.coverImage) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
 
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is required");
-  }
+  // Method-2
+
+  // if (
+  //   req.files &&
+  //   Array.isArray(req.files.coverImage) &&
+  //   req.files.coverImage.length > 0
+  // ) {
+  //   coverImageLocalPath = req.files.coverImage[0].path;
+  // }
+
+  // if (!avatarLocalPath) {
+  //   throw new ApiError(400, "Avatar file is required");
+  // }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Avatar file is not uploaded on cloudinary");
+  }
+
+  if (coverImageLocalPath && !coverImage) {
+    throw new ApiError(400, "Cover image file is not uploaded on cloudinary");
   }
 
   const user = await User.create({
